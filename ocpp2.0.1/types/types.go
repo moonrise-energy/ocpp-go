@@ -30,7 +30,7 @@ const (
 	AuthorizationStatusInvalid            AuthorizationStatus = "Invalid"
 	AuthorizationStatusConcurrentTx       AuthorizationStatus = "ConcurrentTx"
 	AuthorizationStatusNoCredit           AuthorizationStatus = "NoCredit"
-	AuthorizationStatusNotAllowedTypeEVSE AuthorizationStatus = "NotAllowedTypeEVS"
+	AuthorizationStatusNotAllowedTypeEVSE AuthorizationStatus = "NotAllowedTypeEVSE"
 	AuthorizationStatusNotAtThisLocation  AuthorizationStatus = "NotAtThisLocation"
 	AuthorizationStatusNotAtThisTime      AuthorizationStatus = "NotAtThisTime"
 	AuthorizationStatusUnknown            AuthorizationStatus = "Unknown"
@@ -262,8 +262,19 @@ type MessageContent struct {
 }
 
 type GroupIdToken struct {
-	IdToken string      `json:"idToken" validate:"required,max=36"`
+	IdToken string      `json:"idToken" validate:"max=36"`
 	Type    IdTokenType `json:"type" validate:"required,idTokenType"`
+}
+
+func isValidGroupIdToken(sl validator.StructLevel) {
+	groupIdToken := sl.Current().Interface().(GroupIdToken)
+	// validate required idToken value except `NoAuthorization` type
+	switch groupIdToken.Type {
+	case IdTokenTypeCentral, IdTokenTypeEMAID, IdTokenTypeISO14443, IdTokenTypeISO15693, IdTokenTypeKeyCode, IdTokenTypeLocal, IdTokenTypeMacAddress:
+		if groupIdToken.IdToken == "" {
+			sl.ReportError(groupIdToken.IdToken, "IdToken", "IdToken", "required", "")
+		}
+	}
 }
 
 type IdTokenInfo struct {
@@ -582,7 +593,7 @@ const (
 	MeasurandPowerOffered                 Measurand      = "Power.Offered"
 	MeasurandPowerReactiveExport          Measurand      = "Power.Reactive.Export"
 	MeasurandPowerReactiveImport          Measurand      = "Power.Reactive.Import"
-	MeasueandSoC                          Measurand      = "SoC"
+	MeasurandSoC                          Measurand      = "SoC"
 	MeasurandTemperature                  Measurand      = "Temperature"
 	MeasurandVoltage                      Measurand      = "Voltage"
 	PhaseL1                               Phase          = "L1"
@@ -615,7 +626,7 @@ func isValidReadingContext(fl validator.FieldLevel) bool {
 func isValidMeasurand(fl validator.FieldLevel) bool {
 	measurand := Measurand(fl.Field().String())
 	switch measurand {
-	case MeasueandSoC, MeasurandCurrentExport, MeasurandCurrentImport, MeasurandCurrentOffered, MeasurandEnergyActiveExportInterval, MeasurandEnergyActiveExportRegister, MeasurandEnergyReactiveExportInterval, MeasurandEnergyReactiveExportRegister, MeasurandEnergyReactiveImportRegister, MeasurandEnergyReactiveImportInterval, MeasurandEnergyActiveImportInterval, MeasurandEnergyActiveImportRegister, MeasurandFrequency, MeasurandPowerActiveExport, MeasurandPowerActiveImport, MeasurandPowerReactiveImport, MeasurandPowerReactiveExport, MeasurandPowerOffered, MeasurandPowerFactor, MeasurandVoltage, MeasurandTemperature, MeasurandEnergyActiveNet, MeasurandEnergyApparentNet, MeasurandEnergyReactiveNet, MeasurandEnergyApparentImport, MeasurandEnergyApparentExport:
+	case MeasurandSoC, MeasurandCurrentExport, MeasurandCurrentImport, MeasurandCurrentOffered, MeasurandEnergyActiveExportInterval, MeasurandEnergyActiveExportRegister, MeasurandEnergyReactiveExportInterval, MeasurandEnergyReactiveExportRegister, MeasurandEnergyReactiveImportRegister, MeasurandEnergyReactiveImportInterval, MeasurandEnergyActiveImportInterval, MeasurandEnergyActiveImportRegister, MeasurandFrequency, MeasurandPowerActiveExport, MeasurandPowerActiveImport, MeasurandPowerReactiveImport, MeasurandPowerReactiveExport, MeasurandPowerOffered, MeasurandPowerFactor, MeasurandVoltage, MeasurandTemperature, MeasurandEnergyActiveNet, MeasurandEnergyApparentNet, MeasurandEnergyReactiveNet, MeasurandEnergyApparentImport, MeasurandEnergyApparentExport:
 		return true
 	default:
 		return false
@@ -744,4 +755,5 @@ func init() {
 	_ = Validate.RegisterValidation("costKind", isValidCostKind)
 
 	Validate.RegisterStructValidation(isValidIdToken, IdToken{})
+	Validate.RegisterStructValidation(isValidGroupIdToken, GroupIdToken{})
 }
